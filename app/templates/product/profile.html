@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}360°产品档案 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- 产品搜索 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="productSearch" class="form-control"
+                       placeholder="输入产品名称或代码...">
+                <button class="btn btn-primary" onclick="searchProduct()">搜索</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索结果下拉 -->
+    <div id="searchResults" class="row mb-3" style="display:none;">
+        <div class="col-md-6">
+            <div class="list-group shadow" id="searchResultList"></div>
+        </div>
+    </div>
+
+    <!-- 产品档案主体（选中产品后显示） -->
+    <div id="productProfile" style="display:none;">
+        <!-- 产品名片 -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 id="prodName" class="mb-2">--</h5>
+                        <div id="prodTags" class="mb-2"></div>
+                        <small class="text-muted" id="prodCode">--</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted">最新净值</small>
+                                <h5 class="text-primary mb-0" id="prodNav">--</h5>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">最新规模</small>
+                                <h5 class="text-success mb-0" id="prodScale">--</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 导航 -->
+        <ul class="nav nav-tabs mb-3" id="profileTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-basic"
+                        type="button">基本信息</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-performance"
+                        type="button">业绩与风险</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-asset"
+                        type="button">资产配置</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fee"
+                        type="button">费率与规则</button>
+            </li>
+        </ul>
+
+        <!-- Tab 内容 -->
+        <div class="tab-content">
+            <!-- 基本信息 -->
+            <div class="tab-pane fade show active" id="tab-basic">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row" id="basicInfo"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 业绩与风险 -->
+            <div class="tab-pane fade" id="tab-performance">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-transparent d-flex justify-content-between">
+                        <span class="fw-bold">净值走势</span>
+                        <div class="btn-group btn-group-sm" id="periodBtns">
+                            <button class="btn btn-outline-primary active" onclick="loadNetWorth('1m')">近1月</button>
+                            <button class="btn btn-outline-primary" onclick="loadNetWorth('3m')">近3月</button>
+                            <button class="btn btn-outline-primary" onclick="loadNetWorth('6m')">近6月</button>
+                            <button class="btn btn-outline-primary" onclick="loadNetWorth('1y')">近1年</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="chartNetWorth" style="height: 400px;"></div>
+                    </div>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">核心指标</div>
+                    <div class="card-body">
+                        <table class="table table-hover" id="perfTable">
+                            <thead>
+                                <tr>
+                                    <th>时间区间</th><th>区间收益率</th><th>年化收益率</th>
+                                    <th>最大回撤</th><th>夏普比率</th>
+                                </tr>
+                            </thead>
+                            <tbody id="perfTableBody">
+                                <tr><td colspan="5" class="text-center text-muted">请先选择产品</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 资产配置 -->
+            <div class="tab-pane fade" id="tab-asset">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5 text-muted">
+                        <i class="bi bi-pie-chart" style="font-size: 3rem;"></i>
+                        <p class="mt-2">资产配置详情（第二阶段开发）</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 费率与规则 -->
+            <div class="tab-pane fade" id="tab-fee">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body" id="feeInfo">
+                        <p class="text-muted text-center py-5">请先选择产品查看费率信息</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div id="emptyState" class="text-center py-5">
+        <i class="bi bi-search" style="font-size: 4rem; color: #dee2e6;"></i>
+        <h5 class="text-muted mt-3">输入产品名称或代码开始搜索</h5>
+        <p class="text-muted">支持产品名称、产品代码、产品ID模糊搜索</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentProductId = null;
+
+function searchProduct() {
+    const keyword = document.getElementById('productSearch').value.trim();
+    if (keyword.length < 2) return;
+
+    fetch('/api/product/search?keyword=' + encodeURIComponent(keyword))
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0 && result.data.length > 0) {
+                const list = document.getElementById('searchResultList');
+                list.innerHTML = result.data.map(p => `
+                    <a href="#" class="list-group-item list-group-item-action"
+                       onclick="selectProduct('${p.product_id}')">
+                        <strong>${p.product_name || '未命名'}</strong>
+                        <small class="text-muted ms-2">${p.product_code || ''}</small>
+                    </a>
+                `).join('');
+                document.getElementById('searchResults').style.display = 'block';
+            }
+        });
+}
+
+function selectProduct(productId) {
+    currentProductId = productId;
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('productProfile').style.display = 'block';
+
+    // 加载产品基本信息
+    fetch('/api/product/' + productId + '/profile')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                renderBasicInfo(result.data);
+            }
+        });
+}
+
+function renderBasicInfo(data) {
+    const p = data.product;
+    document.getElementById('prodName').textContent = p.product_name || '未命名产品';
+    document.getElementById('prodCode').textContent = '登记编码: ' + (p.product_code || '--');
+    document.getElementById('prodNav').textContent = '--';
+    document.getElementById('prodScale').textContent = '--';
+
+    // 标签
+    const tags = [];
+    if (p.raising_type === 1) tags.push('<span class="badge bg-info me-1">公募</span>');
+    else if (p.raising_type === 2) tags.push('<span class="badge bg-secondary me-1">私募</span>');
+    if (p.is_net_worth_type === 1) tags.push('<span class="badge bg-success me-1">净值型</span>');
+    if (p.oper_pattern === 1) tags.push('<span class="badge bg-warning me-1">开放式</span>');
+    else if (p.oper_pattern === 2) tags.push('<span class="badge bg-dark me-1">封闭式</span>');
+    document.getElementById('prodTags').innerHTML = tags.join('');
+
+    // 基本信息字段
+    const fields = [
+        ['产品ID', p.product_id], ['募集方式', p.raising_type === 1 ? '公募' : '私募'],
+        ['运作模式', p.oper_pattern === 1 ? '开放式' : p.oper_pattern === 2 ? '封闭式' : '--'],
+        ['产品成立日期', p.product_start_date || '--'], ['产品结束日期', p.product_end_date || '--'],
+        ['封闭期开始', p.closure_period_start_date || '--'], ['封闭期结束', p.closure_period_end_date || '--'],
+        ['最短持有期', p.min_holding_period ? p.min_holding_period + '天' : '--'],
+        ['是否QDII', p.is_qdii === 1 ? '是' : '否'], ['是否挂钩衍生品', p.is_struct === 1 ? '是' : '否'],
+        ['发行机构ID', p.org_id || '--'],
+    ];
+    document.getElementById('basicInfo').innerHTML = fields.map(f => `
+        <div class="col-md-4 mb-3">
+            <small class="text-muted d-block">${f[0]}</small>
+            <span class="fw-bold">${f[1]}</span>
+        </div>
+    `).join('');
+
+    // 费率信息
+    if (data.commission) {
+        const c = data.commission;
+        const feeFields = [
+            ['固定管理费率', c.management_fee_rate || '--'],
+            ['托管费率', c.custody_fee_rate || '--'],
+            ['销售费率', c.sales_fee_rate || '--'],
+        ];
+        document.getElementById('feeInfo').innerHTML = '<div class="row">' +
+            feeFields.map(f => `
+                <div class="col-md-4 mb-3">
+                    <small class="text-muted d-block">${f[0]}</small>
+                    <span class="fw-bold">${f[1]}</span>
+                </div>
+            `).join('') + '</div>';
+    }
+}
+
+function loadNetWorth(period) {
+    if (!currentProductId) return;
+
+    // 更新按钮状态
+    document.querySelectorAll('#periodBtns button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    fetch('/api/product/' + currentProductId + '/net-worth?period=' + period)
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0 && result.data.length > 0) {
+                const data = result.data;
+                const chart = echarts.init(document.getElementById('chartNetWorth'));
+                chart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: data.map(d => d.date) },
+                    yAxis: { type: 'value', name: '单位净值' },
+                    series: [{
+                        name: '单位净值',
+                        type: 'line',
+                        data: data.map(d => d.net_worth),
+                        smooth: true,
+                        showSymbol: false,
+                    }],
+                    dataZoom: [{ type: 'inside' }, { type: 'slider' }],
+                });
+            }
+        });
+}
+
+// 搜索输入框回车触发
+document.getElementById('productSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchProduct();
+});
+</script>
+{% endblock %}

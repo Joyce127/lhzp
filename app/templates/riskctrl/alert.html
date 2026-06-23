@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}风险事件预警 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-shield-exclamation me-2"></i>风险事件预警</h4>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-danger active" onclick="filterAlerts('all')">全部</button>
+            <button class="btn btn-outline-danger" onclick="filterAlerts('drawdown')">回撤预警</button>
+            <button class="btn btn-outline-danger" onclick="filterAlerts('below_net')">破净预警</button>
+            <button class="btn btn-outline-danger" onclick="filterAlerts('negative_yield')">负收益</button>
+        </div>
+    </div>
+
+    <!-- 统计摘要 -->
+    <div class="row g-3 mb-3" id="alertSummary">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h3 class="text-danger mb-0" id="countNew">--</h3>
+                    <small class="text-muted">今日新增预警</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h3 class="text-warning mb-0" id="countPending">--</h3>
+                    <small class="text-muted">待处理</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h3 class="text-success mb-0" id="countResolved">--</h3>
+                    <small class="text-muted">已处理</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预警列表 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>预警类型</th><th>产品/机构</th><th>预警详情</th>
+                        <th>触发日期</th><th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="alertBody">
+                    <tr><td colspan="5" class="text-center text-muted py-3">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', () => loadAlerts());
+
+function filterAlerts(type) {
+    currentFilter = type;
+    document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    loadAlerts();
+}
+
+function loadAlerts() {
+    const url = currentFilter === 'all' ? '/api/alert/list' : '/api/alert/list?type=' + currentFilter;
+    fetch(url)
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const data = result.data;
+                // 统计
+                document.getElementById('countNew').textContent = data.length;
+                document.getElementById('countPending').textContent = data.filter(a => a.status === 'pending').length;
+                document.getElementById('countResolved').textContent = data.filter(a => a.status === 'resolved').length;
+
+                // 列表
+                const tbody = document.getElementById('alertBody');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success py-3">暂无预警，系统运行正常</td></tr>';
+                } else {
+                    const typeBadges = {
+                        'drawdown': 'bg-danger',
+                        'below_net': 'bg-warning text-dark',
+                        'negative_yield': 'bg-info',
+                        'payment_risk': 'bg-dark'
+                    };
+                    tbody.innerHTML = data.map(a => `
+                        <tr>
+                            <td><span class="badge ${typeBadges[a.type] || 'bg-secondary'}">${a.type_name}</span></td>
+                            <td><strong>${a.product_name || ''}</strong>
+                                <br><small class="text-muted">${a.org_name || ''}</small></td>
+                            <td><small>${a.detail}</small></td>
+                            <td><small>${a.date}</small></td>
+                            <td><span class="badge ${a.status === 'pending' ? 'bg-danger' : 'bg-success'}">
+                                ${a.status === 'pending' ? '待处理' : '已处理'}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}多维排行榜 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h4 class="mb-3"><i class="bi bi-trophy me-2"></i>多维排行榜</h4>
+
+    <!-- 筛选条件 -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-center">
+                <div class="col-auto"><small class="text-muted">产品分类:</small></div>
+                <div class="col-md-2">
+                    <select id="filterCategory" class="form-select form-select-sm" onchange="loadRanking()">
+                        <option value="">全部分类</option>
+                    </select>
+                </div>
+                <div class="col-auto"><small class="text-muted">发行机构:</small></div>
+                <div class="col-md-2">
+                    <select id="filterIssuer" class="form-select form-select-sm" onchange="loadRanking()">
+                        <option value="">全部机构</option>
+                        <option value="中邮理财">⭐ 我司</option>
+                    </select>
+                </div>
+                <div class="col-auto"><small class="text-muted">时间周期:</small></div>
+                <div class="col-md-1">
+                    <select id="filterPeriod" class="form-select form-select-sm" onchange="loadRanking()">
+                        <option value="1m">近1月</option>
+                        <option value="3m" selected>近3月</option>
+                        <option value="6m">近6月</option>
+                        <option value="1y">近1年</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 榜单类型切换 -->
+    <ul class="nav nav-pills mb-3" id="rankTabs">
+        <li class="nav-item">
+            <a class="nav-link active" href="#" onclick="switchRank('return')">收益率榜</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="switchRank('drawdown')">最大回撤榜</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="switchRank('sharpe')">夏普比率榜</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="switchRank('calmar')">卡玛比率榜</a>
+        </li>
+    </ul>
+
+    <!-- 排行表格 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <span class="fw-bold" id="rankTitle">收益率排行榜</span>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="loadRanking()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:60px">排名</th>
+                            <th>产品名称</th>
+                            <th>发行机构</th>
+                            <th>产品分类</th>
+                            <th>指标值</th>
+                            <th>数据日期</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingBody">
+                        <tr><td colspan="6" class="text-center text-muted py-4">
+                            <div class="spinner-border spinner-border-sm me-2"></div>加载中...
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">注：我司产品高亮显示</small>
+            <div class="btn-group btn-group-sm" id="pagination">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRankType = 'return';
+let currentPage = 1;
+const RANK_LABELS = {
+    'return': '收益率排行榜',
+    'drawdown': '最大回撤排行榜',
+    'sharpe': '夏普比率排行榜',
+    'calmar': '卡玛比率排行榜'
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadRanking();
+});
+
+function switchRank(type) {
+    currentRankType = type;
+    currentPage = 1;
+    document.querySelectorAll('#rankTabs .nav-link').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('rankTitle').textContent = RANK_LABELS[type] || '排行榜';
+    loadRanking();
+}
+
+function loadCategories() {
+    fetch('/api/ranking/categories')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const sel = document.getElementById('filterCategory');
+                for (const [c1, c2s] of Object.entries(result.data)) {
+                    for (const c2 of c2s) {
+                        sel.innerHTML += `<option value="${c2}">${c2}</option>`;
+                    }
+                }
+            }
+        });
+}
+
+function loadRanking() {
+    const params = new URLSearchParams({
+        type: currentRankType,
+        period: document.getElementById('filterPeriod').value,
+        page: currentPage,
+    });
+    const cat = document.getElementById('filterCategory').value;
+    const issuer = document.getElementById('filterIssuer').value;
+    if (cat) params.set('category', cat);
+    if (issuer) params.set('issuer', issuer);
+
+    fetch('/api/ranking/list?' + params.toString())
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                renderRanking(result.data);
+            }
+        });
+}
+
+function renderRanking(data) {
+    const tbody = document.getElementById('rankingBody');
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">暂无数据</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.map((r, i) => {
+        const cls = r.is_ours ? 'table-primary' : '';
+        const badge = r.is_ours ? ' <span class="badge bg-primary">我司</span>' : '';
+        const metric = currentRankType === 'drawdown' ? r.metric_value.toFixed(2) + '%' : r.metric_value.toFixed(4);
+        return `
+            <tr class="${cls}">
+                <td class="fw-bold">${(currentPage - 1) * 20 + i + 1}</td>
+                <td>
+                    <a href="/product/360?pid=${r.product_id}" class="text-decoration-none">
+                        ${r.product_name.substring(0, 40)}
+                    </a>${badge}
+                </td>
+                <td><small>${r.org_name || r.org_abbreviation || '--'}</small></td>
+                <td><small class="text-muted">${r.category2 || r.category1 || '--'}</small></td>
+                <td class="fw-bold font-monospace">${metric}</td>
+                <td><small class="text-muted">${r.calculate_date}</small></td>
+            </tr>
+        `;
+    }).join('');
+}
+</script>
+{% endblock %}

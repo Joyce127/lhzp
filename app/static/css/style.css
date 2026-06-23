@@ -1,0 +1,58 @@
+/* 联合智评数据应用平台 自定义样式 */
+
+body {
+    background-color: #f5f6fa;
+}
+
+.main-content {
+    padding-top: 1rem;
+    min-height: calc(100vh - 56px);
+}
+
+/* KPI图标圆形容器 */
+.icon-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+}
+
+/* 卡片悬停效果 */
+.card {
+    transition: box-shadow 0.2s;
+}
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 导航栏品牌 */
+.navbar-brand {
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+}
+
+/* Tab 激活态 */
+.nav-tabs .nav-link.active {
+    font-weight: 600;
+    border-bottom: 2px solid #0d6efd;
+}
+
+/* 表格我司产品高亮 */
+tr.highlight-psbc {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+tr.highlight-psbc td:first-child::before {
+    content: "★ ";
+    color: #0d6efd;
+}
+
+/* 预警列表 */
+#alertList .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* 搜索建议下拉 */
+#searchResultList .list-group-item:hover {
+    background-color: #e7f1ff;
+}

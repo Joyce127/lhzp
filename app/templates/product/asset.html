@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}资产配置透视 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h4 class="mb-3"><i class="bi bi-pie-chart me-2"></i>资产配置透视</h4>
+
+    <!-- 产品搜索 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" id="productSearch" class="form-control" placeholder="输入产品名称或代码...">
+                <button class="btn btn-primary" onclick="searchAndLoad()">查询</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div id="searchResults" class="row mb-3" style="display:none;">
+        <div class="col-md-6">
+            <div class="list-group shadow" id="resultList"></div>
+        </div>
+    </div>
+
+    <!-- 资产配置详情 -->
+    <div id="assetDetail" style="display:none;">
+        <div class="row g-3">
+            <!-- 资产配置饼图 -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">穿透后资产配置</div>
+                    <div class="card-body">
+                        <div id="chartAllocation" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 前十大持仓 -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">穿透后前十大重仓资产</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>排名</th><th>资产名称</th><th>类型</th><th>占比</th></tr>
+                            </thead>
+                            <tbody id="holdingsBody">
+                                <tr><td colspan="4" class="text-center text-muted py-3">请先查询产品</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 杠杆率 -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent fw-bold">杠杆率</div>
+                    <div class="card-body text-center">
+                        <div id="chartLeverage" style="height: 200px;"></div>
+                        <p class="text-muted mt-2" id="leverageInfo">--</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="emptyState" class="text-center py-5">
+        <i class="bi bi-search" style="font-size: 3rem; color: #dee2e6;"></i>
+        <h5 class="text-muted mt-3">输入产品名称查询资产配置</h5>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPid = null;
+
+function searchAndLoad() {
+    const kw = document.getElementById('productSearch').value.trim();
+    if (kw.length < 2) return;
+    fetch('/api/product/search?keyword=' + encodeURIComponent(kw))
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0 && result.data.length > 0) {
+                const list = document.getElementById('resultList');
+                list.innerHTML = result.data.map(p => `
+                    <a href="#" class="list-group-item list-group-item-action"
+                       onclick="loadAsset('${p.product_id}')">
+                        <strong>${p.product_name || '-'}</strong>
+                        <small class="text-muted ms-2">${p.product_code || ''}</small>
+                    </a>
+                `).join('');
+                document.getElementById('searchResults').style.display = 'block';
+            }
+        });
+}
+
+function loadAsset(pid) {
+    currentPid = pid;
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('assetDetail').style.display = 'block';
+
+    fetch('/api/asset/' + pid + '/allocation')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) renderAsset(result.data);
+        });
+}
+
+function renderAsset(data) {
+    // 资产配置饼图
+    if (data.allocation.length > 0) {
+        const chart = echarts.init(document.getElementById('chartAllocation'));
+        chart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
+            series: [{
+                type: 'pie', radius: ['40%', '70%'],
+                data: data.allocation.map(a => ({ name: a.type, value: a.ratio })),
+                label: { formatter: '{b}\n{d}%' },
+            }]
+        });
+    }
+
+    // 前十大持仓
+    const hbody = document.getElementById('holdingsBody');
+    if (data.top_holdings.length > 0) {
+        hbody.innerHTML = data.top_holdings.map((h, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><small>${h.name || '-'}</small></td>
+                <td><small class="text-muted">${h.type || '-'}</small></td>
+                <td class="font-monospace">${h.proportion.toFixed(2)}%</td>
+            </tr>
+        `).join('');
+    } else {
+        hbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">暂无持仓数据</td></tr>';
+    }
+
+    // 杠杆率仪表盘
+    if (data.leverage) {
+        const chart = echarts.init(document.getElementById('chartLeverage'));
+        chart.setOption({
+            series: [{
+                type: 'gauge',
+                startAngle: 200, endAngle: -20,
+                min: 0, max: 200,
+                detail: { formatter: '{value}%' },
+                data: [{ value: data.leverage, name: '杠杆率' }],
+                axisLine: { lineStyle: { color: [[0.6, '#198754'], [0.8, '#ffc107'], [1, '#dc3545']] } }
+            }]
+        });
+        document.getElementById('leverageInfo').textContent = '报告期: ' + data.leverage_date;
+    }
+}
+
+document.getElementById('productSearch').addEventListener('keypress', e => {
+    if (e.key === 'Enter') searchAndLoad();
+});
+</script>
+{% endblock %}

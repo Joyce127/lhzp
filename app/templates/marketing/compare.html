@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}产品PK台 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h4 class="mb-3"><i class="bi bi-arrow-left-right me-2"></i>自动化营销支持 — 产品PK台</h4>
+
+    <!-- 产品选择 -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">产品1</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="search1" class="form-control" placeholder="搜索产品...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">产品2</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="search2" class="form-control" placeholder="搜索产品...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">产品3 (可选)</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="search3" class="form-control" placeholder="搜索产品...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm w-100" onclick="runCompare()">
+                        <i class="bi bi-bar-chart me-1"></i> 开始对比
+                    </button>
+                </div>
+            </div>
+            <div class="row mt-2" id="searchHints"></div>
+        </div>
+    </div>
+
+    <!-- 对比结果 -->
+    <div id="compareResult" style="display:none;">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <span class="fw-bold" id="compareTitle">产品对比报告</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyText()">
+                        <i class="bi bi-clipboard"></i> 复制文字
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0" id="compareTable">
+                        <thead>
+                            <tr id="compareHeader"></tr>
+                        </thead>
+                        <tbody id="compareBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="emptyState" class="text-center py-5">
+        <i class="bi bi-arrow-left-right" style="font-size:3rem;color:#dee2e6;"></i>
+        <h5 class="text-muted mt-3">选择 2-3 个产品，开始对比</h5>
+        <p class="text-muted small">系统自动判断每个维度的优劣</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedProducts = [null, null, null];
+let searchTimers = [null, null, null];
+
+// 搜索框事件
+[1,2,3].forEach(i => {
+    const el = document.getElementById('search' + i);
+    el.addEventListener('input', function() {
+        clearTimeout(searchTimers[i-1]);
+        searchTimers[i-1] = setTimeout(() => searchProducts(i), 400);
+    });
+    el.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { clearTimeout(searchTimers[i-1]); searchProducts(i); }
+    });
+});
+
+function searchProducts(slot) {
+    const kw = document.getElementById('search' + slot).value.trim();
+    if (kw.length < 2) return;
+
+    fetch('/api/product/search?keyword=' + encodeURIComponent(kw))
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0 && result.data.length > 0) {
+                showSearchResults(slot, result.data);
+            }
+        });
+}
+
+function showSearchResults(slot, products) {
+    const hints = document.getElementById('searchHints');
+    hints.innerHTML = products.slice(0, 8).map(p => `
+        <div class="col-md-4">
+            <a href="#" class="list-group-item list-group-item-action py-1 small"
+               onclick="selectProduct(${slot}, '${p.product_id}', '${(p.product_name||'').substring(0,30)}')">
+                ${(p.product_name||'').substring(0,30)}
+            </a>
+        </div>
+    `).join('');
+}
+
+function selectProduct(slot, pid, name) {
+    selectedProducts[slot-1] = pid;
+    document.getElementById('search' + slot).value = name;
+    document.getElementById('searchHints').innerHTML = '';
+}
+
+function runCompare() {
+    const ids = selectedProducts.filter(Boolean);
+    if (ids.length < 2) { alert('请至少选择2个产品'); return; }
+
+    document.getElementById('emptyState').style.display = 'none';
+
+    fetch('/api/marketing/compare?ids=' + ids.join(','))
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) renderCompare(result.data);
+        });
+}
+
+function renderCompare(data) {
+    document.getElementById('compareResult').style.display = 'block';
+
+    const hasData = data.some(d => d.dimensions.some(dd => dd.value !== null));
+    if (!hasData) {
+        document.getElementById('compareResult').innerHTML = `
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5 text-muted">
+                    <h5>所选产品暂无业绩指标数据</h5>
+                    <p>请选择其他产品进行对比，或确认数据是否已同步</p>
+                </div>
+            </div>`;
+        return;
+    }
+
+    document.getElementById('compareTitle').textContent =
+        data.map(d => d.product_name.substring(0, 15)).join(' vs ') + ' 对比报告';
+
+    // 表头
+    const header = document.getElementById('compareHeader');
+    header.innerHTML = '<th>对比维度</th>' + data.map(d => `
+        <th class="text-center">
+            ${d.product_name.substring(0,15)}<br>
+            <small class="text-muted">${d.org_name || ''}</small>
+        </th>
+    `).join('') + '<th>结论</th>';
+
+    // 表体
+    const body = document.getElementById('compareBody');
+    const sections = [];
+
+    // 收益指标
+    sections.push('<tr class="table-active"><td colspan="' + (data.length+2) + '"><strong>📈 业绩指标</strong></td></tr>');
+    buildMetricRows(data, 'return', sections);
+
+    // 风险指标
+    sections.push('<tr class="table-active"><td colspan="' + (data.length+2) + '"><strong>⚠️ 风险指标</strong></td></tr>');
+    buildMetricRows(data, 'drawdown', sections);
+
+    // 风险调整收益
+    sections.push('<tr class="table-active"><td colspan="' + (data.length+2) + '"><strong>🏆 风险调整后收益</strong></td></tr>');
+    buildMetricRows(data, 'sharpe', sections);
+    buildMetricRows(data, 'calmar', sections);
+
+    // 费率
+    if (data.some(d => d.fee)) {
+        sections.push('<tr class="table-active"><td colspan="' + (data.length+2) + '"><strong>💰 费率对比</strong></td></tr>');
+        [
+            ['管理费率', 'management_fee'],
+            ['托管费率', 'custody_fee'],
+            ['销售费率', 'sales_fee'],
+        ].forEach(([label, key]) => {
+            const vals = data.map(d => d.fee?.[key]);
+            const allNull = vals.every(v => v === null || v === undefined);
+            if (!allNull) {
+                const conclusion = makeConclusion(vals, 'low');
+                sections.push('<tr><td>' + label + '</td>' +
+                    vals.map((v, i) => `<td class="text-center ${conclusion.winner === i ? 'table-success' : ''}">
+                        ${v !== null && v !== undefined ? (v*100).toFixed(2) + '%' : '--'}
+                        ${conclusion.winner === i ? '<span class="badge bg-success ms-1">胜</span>' : ''}
+                    </td>`).join('') +
+                    '<td class="text-center"><small>' + conclusion.text + '</small></td></tr>');
+            }
+        });
+    }
+
+    body.innerHTML = sections.join('');
+}
+
+function buildMetricRows(data, keyword, sections) {
+    const dims = data[0].dimensions.filter(d => d.label.includes(keyword) ||
+        (keyword === 'return' && d.label.includes('收益率')) ||
+        (keyword === 'drawdown' && d.label.includes('回撤')) ||
+        (keyword === 'sharpe' && d.label.includes('夏普')) ||
+        (keyword === 'calmar' && d.label.includes('卡玛')));
+    dims.forEach(dim => {
+        const vals = data.map(p => {
+            const dd = p.dimensions.find(dd => dd.label === dim.label);
+            return dd ? dd.value : null;
+        });
+        const conclusion = makeConclusion(vals, dim.direction);
+        sections.push('<tr><td>' + dim.label + '</td>' +
+            vals.map((v, i) => `<td class="text-center ${conclusion.winner === i ? 'table-success' : ''}">
+                ${v !== null ? (dim.label.includes('比率') ? v.toFixed(4) : v.toFixed(2) + '%') : '--'}
+                ${conclusion.winner === i ? '<span class="badge bg-success ms-1">胜</span>' : ''}
+            </td>`).join('') +
+            '<td class="text-center"><small>' + conclusion.text + '</small></td></tr>');
+    });
+}
+
+function makeConclusion(values, direction) {
+    const valid = values.map((v, i) => ({i, v})).filter(x => x.v !== null && x.v !== undefined);
+    if (valid.length < 2) return {winner: null, text: '数据不足'};
+    if (direction === 'high') {
+        const best = valid.reduce((a, b) => a.v > b.v ? a : b);
+        const worst = valid.reduce((a, b) => a.v < b.v ? a : b);
+        const diff = best.v - worst.v;
+        return {
+            winner: best.i,
+            text: diff > 0.001 ? '▲ 胜出' : (Math.abs(diff) < 0.0001 ? '持平' : '--'),
+        };
+    } else {
+        const best = valid.reduce((a, b) => a.v < b.v ? a : b);
+        const worst = valid.reduce((a, b) => a.v > b.v ? a : b);
+        const diff = worst.v - best.v;
+        return {
+            winner: best.i,
+            text: diff > 0.001 ? '▼ 更优' : (Math.abs(diff) < 0.0001 ? '持平' : '--'),
+        };
+    }
+}
+
+function copyText() {
+    const table = document.getElementById('compareTable');
+    const range = document.createRange();
+    range.selectNodeContents(table);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    alert('对比报告已复制到剪贴板');
+}
+</script>
+{% endblock %}

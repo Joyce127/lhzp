@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}产品健康度扫描 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>产品健康度扫描</h4>
+        <button class="btn btn-primary" onclick="runScan()">
+            <i class="bi bi-arrow-repeat me-1"></i> 一键扫描
+        </button>
+    </div>
+
+    <!-- 扫描结果概览 -->
+    <div class="row g-3 mb-3" id="scanSummary" style="display:none;">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center border-start border-success border-3">
+                <div class="card-body py-3">
+                    <h3 class="text-success mb-0" id="countHealthy">--</h3>
+                    <small class="text-muted">健康产品</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center border-start border-warning border-3">
+                <div class="card-body py-3">
+                    <h3 class="text-warning mb-0" id="countWarn">--</h3>
+                    <small class="text-muted">关注产品</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 僵尸产品 -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold">
+            <i class="bi bi-slash-circle me-2"></i>僵尸产品列表 (规模过小)
+            <small class="text-muted ms-2">连续3个月规模低于5000万</small>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>产品名称</th><th>当前规模(万)</th><th>低规模月数</th><th>建议</th></tr>
+                </thead>
+                <tbody id="zombieBody">
+                    <tr><td colspan="4" class="text-center text-muted py-3">点击"一键扫描"开始</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 异动产品 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-bold">
+            <i class="bi bi-exclamation-diamond me-2"></i>异动产品列表 (关键信息变更)
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>产品名称</th><th>变更类型</th><th>变更详情</th><th>变更日期</th></tr>
+                </thead>
+                <tbody id="changeBody">
+                    <tr><td colspan="4" class="text-center text-muted py-3">点击"一键扫描"开始</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="text-muted mt-2 small" id="lastScanTime" style="display:none;"></p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function runScan() {
+    const scanBtn = document.querySelector('button');
+    scanBtn.disabled = true;
+    scanBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> 扫描中...';
+
+    fetch('/api/health/scan')
+        .then(res => res.json())
+        .then(result => {
+            scanBtn.disabled = false;
+            scanBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> 一键扫描';
+            if (result.code === 0) renderScan(result.data);
+        });
+}
+
+function renderScan(data) {
+    document.getElementById('scanSummary').style.display = 'flex';
+    document.getElementById('countHealthy').textContent = data.healthy_count + ' 只';
+    document.getElementById('countWarn').textContent = (data.zombie_count + data.change_count) + ' 只';
+    document.getElementById('lastScanTime').style.display = 'block';
+    document.getElementById('lastScanTime').textContent = '最新扫描时间: ' + new Date().toLocaleString();
+
+    // 僵尸产品
+    const zbody = document.getElementById('zombieBody');
+    if (data.zombies.length > 0) {
+        zbody.innerHTML = data.zombies.map(z => `
+            <tr>
+                <td>${z.product_name}${z.product_code ? '<br><small class="text-muted">' + z.product_code + '</small>' : ''}</td>
+                <td>${(z.balance / 10000).toFixed(0)}</td>
+                <td><span class="badge ${z.low_months >= 4 ? 'bg-danger' : 'bg-warning'}">${z.low_months} 个月</span></td>
+                <td><small class="${z.low_months >= 4 ? 'text-danger fw-bold' : 'text-muted'}">${z.advice}</small></td>
+            </tr>
+        `).join('');
+    } else {
+        zbody.innerHTML = '<tr><td colspan="4" class="text-center text-success py-3">无僵尸产品</td></tr>';
+    }
+
+    // 异动产品（代码变更 + 投资经理变更）
+    const cbody = document.getElementById('changeBody');
+    const changes = [...(data.code_changes || []), ...(data.manager_changes || [])];
+    if (changes.length > 0) {
+        cbody.innerHTML = changes.map(c => `
+            <tr>
+                <td>${c.product_name || '--'}</td>
+                <td><span class="badge bg-info">${c.change_type || '变更'}</span></td>
+                <td><small>${c.change_detail || c.manager_name || '--'}</small></td>
+                <td><small>${c.change_date || '--'}</small></td>
+            </tr>
+        `).join('');
+    } else {
+        cbody.innerHTML = '<tr><td colspan="4" class="text-center text-success py-3">无近期异动</td></tr>';
+    }
+}
+</script>
+{% endblock %}

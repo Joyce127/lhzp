@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}渠道与区域分析 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h4 class="mb-3"><i class="bi bi-shop me-2"></i>渠道与区域分析</h4>
+
+    <ul class="nav nav-tabs mb-3" id="channelTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-channel">代销渠道分析</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-region">销售区域分析</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- 代销渠道分析 -->
+        <div class="tab-pane fade show active" id="tab-channel">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent fw-bold">代销机构列表</div>
+                        <div class="list-group list-group-flush" id="channelList" style="max-height:500px;overflow-y:auto;">
+                            <div class="list-group-item text-center text-muted">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div id="channelDetail" class="text-center py-5 text-muted">
+                        <i class="bi bi-arrow-left-circle" style="font-size:2rem;"></i>
+                        <p class="mt-2">请从左侧选择一个代销机构</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 销售区域分析 -->
+        <div class="tab-pane fade" id="tab-region">
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent fw-bold">省份产品覆盖热度</div>
+                        <div class="card-body">
+                            <div id="chartRegion" style="height:450px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent fw-bold">省份数据</div>
+                        <div class="card-body p-0" style="max-height:450px;overflow-y:auto;">
+                            <table class="table table-sm table-hover mb-0" id="regionTable">
+                                <thead><tr><th>省份</th><th>产品数</th></tr></thead>
+                                <tbody id="regionBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentOrgId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadChannelList();
+    loadRegionData();
+});
+
+function loadChannelList() {
+    fetch('/api/channel/list')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const list = document.getElementById('channelList');
+                list.innerHTML = result.data.map(o => `
+                    <a href="#" class="list-group-item list-group-item-action"
+                       onclick="selectChannel(${o.org_id})">
+                        <strong>${o.org_name || o.org_abbreviation}</strong>
+                        <small class="text-muted d-block">${o.org_abbreviation || ''}</small>
+                    </a>
+                `).join('');
+            }
+        });
+}
+
+function selectChannel(orgId) {
+    currentOrgId = orgId;
+    document.querySelectorAll('#channelList a').forEach(a => a.classList.remove('active'));
+    event.target.closest('a').classList.add('active');
+
+    fetch('/api/channel/' + orgId + '/overview')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) renderChannelDetail(result.data);
+        });
+}
+
+function renderChannelDetail(data) {
+    const o = data.org;
+    const container = document.getElementById('channelDetail');
+    container.innerHTML = `
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm text-center p-3">
+                    <h4 class="text-primary">${data.product_count} 只</h4>
+                    <small class="text-muted">代销产品数</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm text-center p-3">
+                    <h4 class="text-info">${o.org_type || '--'}</h4>
+                    <small class="text-muted">机构类型</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header small fw-bold">产品类型分布</div>
+                    <div class="card-body"><div id="chartTypeDist" style="height:250px;"></div></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header small fw-bold">代销产品列表</div>
+                    <div class="card-body p-0" style="max-height:250px;overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>#</th><th>产品名称</th></tr></thead>
+                            <tbody>
+                                ${data.products.map((p,i) => `
+                                    <tr>
+                                        <td>${i+1}</td>
+                                        <td><small>${p.product_name}</small>
+                                            <br><small class="text-muted">${p.product_code||''}</small></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    // 产品类型饼图
+    if (data.type_dist.length > 0) {
+        const chart = echarts.init(document.getElementById('chartTypeDist'));
+        chart.setOption({
+            tooltip:{trigger:'item'},
+            series:[{type:'pie',radius:['40%','65%'],
+                data:data.type_dist.map(d=>({name:d.category,value:d.count}))}]
+        });
+    }
+}
+
+function loadRegionData() {
+    // 省份热度图用柱状图代替中国地图
+    fetch('/api/channel/regions')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0 && result.data.length > 0) {
+                const data = result.data;
+                document.getElementById('regionBody').innerHTML = data.map(r => `
+                    <tr><td>${r.name}</td><td>${r.product_count} 只</td></tr>
+                `).join('');
+
+                const chart = echarts.init(document.getElementById('chartRegion'));
+                chart.setOption({
+                    tooltip:{trigger:'axis'},
+                    grid:{left:80,right:20,top:10,bottom:10},
+                    xAxis:{type:'value',name:'产品数'},
+                    yAxis:{type:'category',data:data.map(d=>d.name).reverse(),axisLabel:{fontSize:10}},
+                    series:[{type:'bar',data:data.map(d=>d.product_count).reverse(),
+                        itemStyle:{color:'#0d6efd'}}]
+                });
+            }
+        });
+}
+</script>
+{% endblock %}

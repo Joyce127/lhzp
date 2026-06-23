@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}市场与投研洞察 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h4 class="mb-3"><i class="bi bi-lightbulb me-2"></i>市场与投研洞察</h4>
+
+    <!-- Tab -->
+    <ul class="nav nav-tabs mb-3" id="researchTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-manager">投资经理画像</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-org">竞品机构动态</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-transaction">关联交易监控</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- 投资经理 -->
+        <div class="tab-pane fade show active" id="tab-manager">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <input type="text" id="mgrSearch" class="form-control" placeholder="搜索投资经理姓名...">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary" onclick="loadManagers()">搜索</button>
+                </div>
+            </div>
+            <div class="row" id="managerList"></div>
+        </div>
+
+        <!-- 竞品机构动态 -->
+        <div class="tab-pane fade" id="tab-org">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0" id="orgDynTable">
+                        <thead class="table-light">
+                            <tr><th>机构名称</th><th>统计日期</th><th>存续规模</th><th>净值化率</th></tr>
+                        </thead>
+                        <tbody id="orgDynBody">
+                            <tr><td colspan="4" class="text-center text-muted py-3">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 关联交易 -->
+        <div class="tab-pane fade" id="tab-transaction">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>交易类型</th><th>产品ID</th><th>详情</th></tr>
+                        </thead>
+                        <tbody id="transBody">
+                            <tr><td colspan="3" class="text-center text-muted py-3">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadManagers();
+    loadOrgDynamics();
+    loadTransactions();
+});
+
+function loadManagers() {
+    const search = document.getElementById('mgrSearch')?.value || '';
+    fetch('/api/research/managers?search=' + encodeURIComponent(search))
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const container = document.getElementById('managerList');
+                container.innerHTML = result.data.map(m => `
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title">${m.full_name || '--'}</h6>
+                                <small class="text-muted">
+                                    机构: ${m.institution || '--'}<br>
+                                    从业起始: ${m.manager_start_date || '--'}<br>
+                                    学历: ${m.education || '--'}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                if (!result.data.length) container.innerHTML = '<div class="col-12 text-muted py-3">暂无数据</div>';
+            }
+        });
+}
+
+function loadOrgDynamics() {
+    fetch('/api/research/org-dynamics')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const tbody = document.getElementById('orgDynBody');
+                if (result.data.length) {
+                    tbody.innerHTML = result.data.map(r => `
+                        <tr>
+                            <td>${r.issuer_name || '--'}</td>
+                            <td>${r.statistics_date || '--'}</td>
+                            <td>${r.total_scale ? (r.total_scale/1e8).toFixed(1) + '亿' : '--'}</td>
+                            <td>${r.net_value_ratio ? (r.net_value_ratio*100).toFixed(1) + '%' : '--'}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">暂无数据</td></tr>';
+                }
+            }
+        });
+}
+
+function loadTransactions() {
+    fetch('/api/research/transactions')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const tbody = document.getElementById('transBody');
+                if (result.data.length) {
+                    tbody.innerHTML = result.data.slice(0, 20).map(r => `
+                        <tr>
+                            <td><span class="badge bg-info">${r.tx_type || '关联交易'}</span></td>
+                            <td><small>${r.product_id || '--'}</small></td>
+                            <td><small>${r.related_name || r.asset_name || '--'}</small></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">暂无关联交易记录</td></tr>';
+                }
+            }
+        });
+}
+
+// Tab切换时加载数据
+document.getElementById('researchTabs').addEventListener('shown.bs.tab', function(e) {
+    if (e.target.id === 'tab-manager-tab') loadManagers();
+    else if (e.target.id === 'tab-org-tab') loadOrgDynamics();
+    else if (e.target.id === 'tab-transaction-tab') loadTransactions();
+});
+</script>
+{% endblock %}

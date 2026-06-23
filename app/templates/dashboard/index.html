@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}公司经营驾驶舱 · 联合智评{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-speedometer2 me-2"></i>公司经营驾驶舱</h4>
+            <small class="text-muted">数据更新时间：<span id="updateTime">加载中...</span></small>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm active" onclick="switchPeriod('yesterday')">昨日</button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="switchPeriod('week')">近7日</button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="switchPeriod('month')">近30日</button>
+        </div>
+    </div>
+
+    <!-- KPI 卡片 -->
+    <div class="row g-3 mb-4" id="kpiCards">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small class="text-muted">总管理规模 (AUM)</small>
+                            <h3 class="fw-bold mt-1" id="kpiAum">--</h3>
+                            <small class="text-success" id="kpiAumChange">--</small>
+                        </div>
+                        <div class="icon-circle bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-currency-yen fs-4 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small class="text-muted">存续产品数</small>
+                            <h3 class="fw-bold mt-1" id="kpiProductCount">--</h3>
+                            <small class="text-muted" id="kpiProductChange">--</small>
+                        </div>
+                        <div class="icon-circle bg-success bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-box-seam fs-4 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small class="text-muted">整体破净率</small>
+                            <h3 class="fw-bold mt-1" id="kpiBrokenRate">--</h3>
+                            <small class="text-muted">破净产品 <span id="kpiBrokenCount">--</span> 只</small>
+                        </div>
+                        <div class="icon-circle bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-exclamation-triangle fs-4 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small class="text-muted">加权平均年化收益率</small>
+                            <h3 class="fw-bold mt-1" id="kpiAvgYield">--</h3>
+                            <small class="text-muted">规模加权口径</small>
+                        </div>
+                        <div class="icon-circle bg-info bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-graph-up-arrow fs-4 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表行 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent fw-bold">
+                    <i class="bi bi-pie-chart me-2"></i>规模结构分析
+                </div>
+                <div class="card-body">
+                    <div id="chartScale" style="height: 320px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent fw-bold">
+                    <i class="bi bi-bar-chart me-2"></i>核心风险收益指标
+                </div>
+                <div class="card-body">
+                    <div id="chartRisk" style="height: 320px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预警行 -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent fw-bold d-flex justify-content-between">
+                    <span><i class="bi bi-map me-2"></i>销售区域分布</span>
+                    <small class="text-muted">按存续规模</small>
+                </div>
+                <div class="card-body">
+                    <div id="chartRegion" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent fw-bold d-flex justify-content-between">
+                    <span><i class="bi bi-bell me-2"></i>重大预警看板</span>
+                    <a href="/risk/alert" class="btn btn-sm btn-outline-danger">查看全部</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="alertList">
+                        <div class="list-group-item text-center text-muted py-3">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 页面加载完成后获取数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadOverview();
+    loadScaleStructure();
+    loadRiskIndicators();
+    loadAlertSummary();
+});
+
+function loadOverview() {
+    fetch('/api/dashboard/overview')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const d = result.data;
+                document.getElementById('kpiAum').textContent = d.aum_display;
+                document.getElementById('kpiProductCount').textContent = d.product_count + ' 只';
+                document.getElementById('kpiBrokenRate').textContent =
+                    d.broken_net_rate > 0 ? d.broken_net_rate.toFixed(2) + '%' : '0%';
+                document.getElementById('kpiBrokenCount').textContent = d.broken_net_count;
+                document.getElementById('kpiAvgYield').textContent = (d.avg_yield * 100).toFixed(4) + '%';
+                document.getElementById('updateTime').textContent = new Date().toLocaleString();
+            }
+        });
+}
+
+function loadScaleStructure() {
+    fetch('/api/dashboard/scale-structure')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0 && result.data.length > 0) {
+                const chart = echarts.init(document.getElementById('chartScale'));
+                chart.setOption({
+                    tooltip: { trigger: 'item' },
+                    legend: { bottom: 0, type: 'scroll' },
+                    series: [{
+                        type: 'pie',
+                        radius: ['45%', '75%'],
+                        center: ['50%', '40%'],
+                        data: result.data.map(d => ({ name: d.name, value: d.value })),
+                        label: { formatter: '{b}\n{d}%' },
+                        emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } }
+                    }]
+                });
+            }
+        });
+}
+
+function loadRiskIndicators() {
+    fetch('/api/dashboard/risk-indicators')
+        .then(res => res.json())
+        .then(result => {
+            if (result.code === 0) {
+                const d = result.data;
+                const chart = echarts.init(document.getElementById('chartRisk'));
+                chart.setOption({
+                    tooltip: { trigger: 'axis', valueFormatter: v => v.toFixed(2) + '%' },
+                    xAxis: {
+                        type: 'category',
+                        data: ['近1月收益率', '近6月收益率', '近1年收益率', '成立以来', '近1月回撤', '近1年回撤']
+                    },
+                    yAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
+                    series: [{
+                        type: 'bar',
+                        data: [
+                            { value: +(d.yield_1m * 100).toFixed(2), itemStyle: { color: '#198754' } },
+                            { value: +(d.yield_6m * 100).toFixed(2), itemStyle: { color: '#20c997' } },
+                            { value: +(d.yield_1y * 100).toFixed(2), itemStyle: { color: '#0d6efd' } },
+                            { value: +(d.yield_si * 100).toFixed(2), itemStyle: { color: '#6f42c1' } },
+                            { value: +(d.drawdown_1m * 100).toFixed(2), itemStyle: { color: d.drawdown_1m < -0.03 ? '#dc3545' : '#ffc107' } },
+                            { value: +(d.drawdown_1y * 100).toFixed(2), itemStyle: { color: d.drawdown_1y < -0.03 ? '#dc3545' : '#ffc107' } }
+                        ],
+                        barWidth: '50%',
+                        label: { show: true, position: 'top', formatter: '{c}%' }
+                    }]
+                });
+            }
+        });
+}
+
+function loadAlertSummary() {
+    fetch('/api/dashboard/alert-summary')
+        .then(res => res.json())
+        .then(result => {
+            const container = document.getElementById('alertList');
+            if (result.code === 0 && result.data.length > 0) {
+                container.innerHTML = result.data.map((a, i) => `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-danger me-2">${a.alert_type}</span>
+                            <small class="flex-grow-1 fw-bold">${a.product_name || ''}</small>
+                            <small class="text-muted">${a.alert_detail || ''}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="list-group-item text-center text-success py-3">暂无预警</div>';
+            }
+        });
+}
+
+function switchPeriod(period) {
+    // TODO: 实现时间周期切换
+}
+</script>
+{% endblock %}
