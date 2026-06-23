@@ -10,102 +10,110 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- 顶栏 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="/">
-                <i class="bi bi-bank me-2"></i>联合智评数据应用平台
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="topNav">
-                <ul class="navbar-nav me-auto">
-                    {% if 'dashboard' in user_modules %}
-                    <li class="nav-item">
-                        <a class="nav-link {{ 'active' if request.path == '/' }}" href="/">
-                            <i class="bi bi-speedometer2"></i> 公司经营驾驶舱
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if 'product' in user_modules %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ 'active' if request.path.startswith('/product') }}"
-                           href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-graph-up"></i> 产品与投研中心
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/product/360">360°产品档案</a></li>
-                            <li><a class="dropdown-item" href="/product/ranking">多维排行榜</a></li>
-                            <li><a class="dropdown-item" href="/product/asset">资产配置透视</a></li>
-                            <li><a class="dropdown-item" href="/product/research">市场与投研洞察</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    {% if 'marketing' in user_modules %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ 'active' if request.path.startswith('/marketing') }}"
-                           href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-shop"></i> 营销与客户中心
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/marketing/channel">渠道与区域分析</a></li>
-                            <li><a class="dropdown-item" href="/marketing/compare">自动化营销支持</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    {% if 'riskctrl' in user_modules %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ 'active' if request.path.startswith('/risk') }}"
-                           href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-shield-exclamation"></i> 智能风控中心
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/risk/alert">风险事件预警</a></li>
-                            <li><a class="dropdown-item" href="/risk/health">产品健康度扫描</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i>
-                            {{ current_user.display_name }}
-                            <span class="badge bg-secondary ms-1">{{ current_user.role_label }}</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text text-muted">
-                                角色：{{ current_user.role_label }}
-                            </span></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/logout">
-                                <i class="bi bi-box-arrow-right"></i> 退出登录
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
+    <div class="app-layout">
+        <!-- 左侧栏 -->
+        <aside class="sidebar">
+            <!-- 品牌区 -->
+            <div class="sidebar-brand">
+                <i class="bi bi-bank me-2"></i>
+                <span class="sidebar-brand-text">联合智评</span>
             </div>
-        </div>
-    </nav>
 
-    <!-- 主内容区 -->
-    <main class="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="container-fluid mt-3">
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <!-- 导航菜单 -->
+            <nav class="sidebar-nav">
+                {% if 'dashboard' in user_modules %}
+                <a href="/" class="sidebar-nav-item {{ 'active' if request.path == '/' }}">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>公司经营驾驶舱</span>
+                </a>
+                {% endif %}
+
+                {% if 'product' in user_modules %}
+                <div class="sidebar-nav-group">
+                    <span class="sidebar-nav-label">
+                        <i class="bi bi-graph-up"></i>
+                        <span>产品与投研中心</span>
+                    </span>
+                    <a href="/product/360" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/product/360') }}">
+                        <span>360°产品档案</span>
+                    </a>
+                    <a href="/product/ranking" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/product/ranking') }}">
+                        <span>多维排行榜</span>
+                    </a>
+                    <a href="/product/asset" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/product/asset') }}">
+                        <span>资产配置透视</span>
+                    </a>
+                    <a href="/product/research" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/product/research') }}">
+                        <span>市场与投研洞察</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                {% if 'marketing' in user_modules %}
+                <div class="sidebar-nav-group">
+                    <span class="sidebar-nav-label">
+                        <i class="bi bi-shop"></i>
+                        <span>营销与客户中心</span>
+                    </span>
+                    <a href="/marketing/channel" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/marketing/channel') }}">
+                        <span>渠道与区域分析</span>
+                    </a>
+                    <a href="/marketing/compare" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/marketing/compare') }}">
+                        <span>自动化营销支持</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                {% if 'riskctrl' in user_modules %}
+                <div class="sidebar-nav-group">
+                    <span class="sidebar-nav-label">
+                        <i class="bi bi-shield-exclamation"></i>
+                        <span>智能风控中心</span>
+                    </span>
+                    <a href="/risk/alert" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/risk/alert') }}">
+                        <span>风险事件预警</span>
+                    </a>
+                    <a href="/risk/health" class="sidebar-nav-item sidebar-nav-sub {{ 'active' if request.path.startswith('/risk/health') }}">
+                        <span>产品健康度扫描</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+
+            <!-- 用户区 -->
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <i class="bi bi-person-circle"></i>
+                    <div class="sidebar-user-info">
+                        <span class="sidebar-user-name">{{ current_user.display_name }}</span>
+                        <span class="sidebar-user-role">{{ current_user.role_label }}</span>
+                    </div>
+                </div>
+                <a href="/logout" class="sidebar-logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>退出登录</span>
+                </a>
             </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% endwith %}
+        </aside>
 
-        {% block content %}{% endblock %}
-    </main>
+        <!-- 主内容区 -->
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="container-fluid mt-3">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>

@@ -1,58 +1,371 @@
-/* 联合智评数据应用平台 自定义样式 */
+/* ============================================================
+   联合智评数据应用平台 — 左侧栏布局 · 邮储绿点缀
+   侧栏：黑底 + 白色图标/文字 + 选中时邮储绿高亮
+   主内容：浅灰底 + 邮储绿图标/按钮
+   ============================================================ */
 
+:root {
+    --green-primary: #00744B;
+    --green-dark: #005C3A;
+    --green-darker: #004530;
+    --green-light: #E8F5F0;
+    --green-hover: #009660;
+    --sidebar-bg: #101A14;
+    --sidebar-width: 240px;
+    --sidebar-collapsed: 64px;
+    --bg-page: #F4F5F7;
+    --sidebar-text: rgba(255,255,255,0.7);
+    --sidebar-text-active: #FFFFFF;
+
+    /* 覆盖 Bootstrap primary 为邮储绿 */
+    --bs-primary: #00744B;
+    --bs-primary-rgb: 0, 116, 75;
+}
+
+/* ========== 全局 ========== */
 body {
-    background-color: #f5f6fa;
+    background-color: var(--bg-page);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow-x: hidden;
 }
 
+a { text-decoration: none; }
+
+/* ========== 应用布局 ========== */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ========== 左侧栏 — 黑底 ========== */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    z-index: 1030;
+    transition: width 0.2s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 品牌区 */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    padding: 18px 20px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.sidebar-brand i {
+    font-size: 1.5rem;
+    color: var(--green-primary);
+}
+
+.sidebar-brand-text {
+    margin-left: 10px;
+}
+
+/* 导航菜单 */
+.sidebar-nav {
+    flex: 1;
+    padding: 8px 0;
+    overflow-y: auto;
+}
+
+.sidebar-nav-group {
+    margin-bottom: 6px;
+}
+
+/* 分组标题 */
+.sidebar-nav-label {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.sidebar-nav-label i {
+    margin-right: 10px;
+    font-size: 0.95rem;
+    /* 分组标题图标：白色半透明 */
+    color: rgba(255,255,255,0.5);
+}
+
+/* 菜单项 */
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    margin: 2px 8px;
+    border-radius: 6px;
+    color: var(--sidebar-text);
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    cursor: pointer;
+    position: relative;
+}
+
+.sidebar-nav-item i {
+    margin-right: 10px;
+    font-size: 1.05rem;
+    width: 22px;
+    text-align: center;
+    /* 默认白色图标 */
+    color: rgba(255,255,255,0.65);
+    transition: color 0.15s ease;
+}
+
+.sidebar-nav-item:hover {
+    background-color: rgba(255,255,255,0.06);
+    color: var(--sidebar-text-active);
+}
+
+.sidebar-nav-item:hover i {
+    color: rgba(255,255,255,0.9);
+}
+
+/* 选中态：邮储绿高亮 */
+.sidebar-nav-item.active {
+    background-color: rgba(0,116,75,0.2);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.sidebar-nav-item.active i {
+    color: var(--green-primary);
+}
+
+/* 子菜单 */
+.sidebar-nav-sub {
+    padding-left: 52px;
+    font-size: 0.84rem;
+}
+
+.sidebar-nav-sub i { display: none; }
+
+/* 用户区 */
+.sidebar-footer {
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 0;
+}
+
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    padding: 8px 20px;
+    color: var(--sidebar-text);
+    white-space: nowrap;
+}
+
+.sidebar-user i {
+    font-size: 1.5rem;
+    margin-right: 10px;
+    color: rgba(255,255,255,0.5);
+}
+
+.sidebar-user-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.sidebar-user-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #FFFFFF;
+}
+
+.sidebar-user-role {
+    font-size: 0.73rem;
+    color: var(--sidebar-text);
+}
+
+.sidebar-logout {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    color: var(--sidebar-text);
+    font-size: 0.86rem;
+    transition: all 0.15s ease;
+}
+
+.sidebar-logout i {
+    margin-right: 10px;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.5);
+}
+
+.sidebar-logout:hover {
+    color: #FFFFFF;
+    background-color: rgba(255,255,255,0.06);
+}
+
+/* ========== 主内容区 ========== */
 .main-content {
-    padding-top: 1rem;
-    min-height: calc(100vh - 56px);
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    min-height: 100vh;
+    padding: 24px;
+    background-color: var(--bg-page);
 }
 
-/* KPI图标圆形容器 */
+/* ========== 卡片样式 ========== */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: box-shadow 0.2s;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.card-header {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #E5E7EB;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 14px 20px;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+/* ========== KPI图标圆形容器 — 邮储绿 ========== */
 .icon-circle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 48px;
     height: 48px;
+    border-radius: 12px;
+    background-color: var(--green-light);
+    color: var(--green-primary);
 }
 
-/* 卡片悬停效果 */
-.card {
-    transition: box-shadow 0.2s;
-}
-.card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
-}
-
-/* 导航栏品牌 */
-.navbar-brand {
-    font-size: 1.1rem;
-    letter-spacing: 0.5px;
-}
-
-/* Tab 激活态 */
+/* ========== 导航/标签页 ========== */
 .nav-tabs .nav-link.active {
     font-weight: 600;
-    border-bottom: 2px solid #0d6efd;
+    border-bottom: 2px solid var(--green-primary);
+    color: var(--green-primary);
 }
 
-/* 表格我司产品高亮 */
-tr.highlight-psbc {
-    background-color: rgba(13, 110, 253, 0.05) !important;
+.nav-tabs .nav-link {
+    color: #6B7280;
 }
+
+/* nav-pills 选中态 — 邮储绿 */
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: var(--green-primary);
+}
+
+/* ========== 链接默认色 — 邮储绿 ========== */
+a {
+    color: var(--green-primary);
+}
+
+a:hover {
+    color: var(--green-hover);
+}
+
+/* ========== 表格高亮（我司产品） ========== */
+tr.highlight-psbc {
+    background-color: var(--green-light) !important;
+}
+
 tr.highlight-psbc td:first-child::before {
     content: "★ ";
-    color: #0d6efd;
+    color: var(--green-primary);
 }
 
-/* 预警列表 */
-#alertList .list-group-item:hover {
-    background-color: #f8f9fa;
-}
-
-/* 搜索建议下拉 */
+/* ========== 列表悬停 ========== */
+#alertList .list-group-item:hover,
 #searchResultList .list-group-item:hover {
-    background-color: #e7f1ff;
+    background-color: var(--green-light);
+}
+
+/* ========== 按钮 — 邮储绿 ========== */
+.btn-primary {
+    background-color: var(--green-primary);
+    border-color: var(--green-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--green-hover);
+    border-color: var(--green-hover);
+}
+
+.btn-outline-primary {
+    color: var(--green-primary);
+    border-color: var(--green-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--green-primary);
+    border-color: var(--green-primary);
+}
+
+/* 分页 active */
+.page-item.active .page-link {
+    background-color: var(--green-primary);
+    border-color: var(--green-primary);
+}
+
+/* ========== 响应式：小屏折叠侧栏 ========== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: var(--sidebar-collapsed);
+    }
+
+    .sidebar-brand-text,
+    .sidebar-nav-item span,
+    .sidebar-nav-label span,
+    .sidebar-user-info,
+    .sidebar-logout span {
+        /* 保留图标，隐藏文字 */
+    }
+
+    .sidebar-nav-item,
+    .sidebar-nav-label,
+    .sidebar-logout {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .sidebar-nav-item i,
+    .sidebar-nav-label i,
+    .sidebar-logout i {
+        margin-right: 0;
+    }
+
+    .sidebar-nav-sub { padding-left: 0; }
+
+    .sidebar-user { justify-content: center; }
+    .sidebar-user i { margin-right: 0; }
+
+    .sidebar-brand {
+        justify-content: center;
+        padding: 18px 10px;
+    }
+
+    .main-content {
+        margin-left: var(--sidebar-collapsed);
+    }
 }
